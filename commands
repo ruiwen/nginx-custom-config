@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -eo pipefail; [[ $DOKKU_TRACE ]] && set -x
+source "$(dirname $0)/../common/functions"
+
+validate_nginx () {
+  set +e
+  sudo /usr/sbin/nginx -t > /dev/null 2>&1
+  exit_code=$?
+  set -e
+  if [[ "$exit_code" -ne "0" ]]; then
+    sudo /usr/sbin/nginx -t
+    exit "$exit_code"
+  fi
+}
+
+
+case "$1" in 
+  nginx:custom-config)
+    APP=$2; NGINX_TEMPLATE="$3"
+    verify_app_name "$APP"
+    APP_PATH="$DOKKU_ROOT/$APP"
+    if [[ -e $NGINX_TEMPLATE ]]; then
+      # Template should follow the style/placeholders of the built-in plugin nginx-vhosts
+      cp $NGINX_TEMPLATE $APP_PATH/nginx.conf.template
+      dokku_log_info1 "Template added to app"
+    else
+      dokku_log_info1 "Template file $NGINX_TEMPLATE does not exist!"
+    fi
+    ;;
+
+  help | nginx:help)
+    cat && cat<<EOF
+    nginx:custom-config <app> <template>            Imports a custom nginx template in the style of the nginx-vhosts built-in plugin
+EOF
+    ;;
+
+  *)
+    exit $DOKKU_NOT_IMPLEMENTED_EXIT
+    ;;
+esac
+ 
+      
